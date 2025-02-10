@@ -1,9 +1,9 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <map>
+#include <fstream>
+#include <algorithm>
 using namespace std;
-
 
 struct Patient {
     int id;
@@ -27,23 +27,30 @@ struct Appointment {
     string time;
 };
 
-
 vector<Patient> patients;
 vector<Doctor> doctors;
 vector<Appointment> appointments;
 int patientIdCounter = 1;
 int doctorIdCounter = 1;
 
+void savePatientsToFile();
+void loadPatientsFromFile();
+void saveDoctorsToFile();
+void loadDoctorsFromFile();
+void saveAppointmentsToFile();
+void loadAppointmentsFromFile();
 
 void addPatient();
 void searchAndUpdatePatient();
 void addDoctor();
-void linkDoctorToPatient();
 void manageAppointments();
 
 int main() {
-    int choice;
+    loadPatientsFromFile();
+    loadDoctorsFromFile();
+    loadAppointmentsFromFile();
 
+    int choice;
     while (true) {
         cout << "\n--- Hospital Management System ---\n";
         cout << "1. Add Patient\n";
@@ -76,6 +83,77 @@ int main() {
     }
 }
 
+void savePatientsToFile() {
+    ofstream file("patients.txt");
+    for (const auto &p : patients) {
+        file << p.id << ',' << p.name << ',' << p.age << ',' << p.contact << ',' << p.medicalHistory << '\n';
+    }
+    file.close();
+}
+
+void loadPatientsFromFile() {
+    ifstream file("patients.txt");
+    if (!file) return;
+    Patient p;
+    while (file >> p.id) {
+        file.ignore();
+        getline(file, p.name, ',');
+        file >> p.age;
+        file.ignore();
+        getline(file, p.contact, ',');
+        getline(file, p.medicalHistory);
+        patients.push_back(p);
+        patientIdCounter = max(patientIdCounter, p.id + 1);
+    }
+    file.close();
+}
+
+void saveDoctorsToFile() {
+    ofstream file("doctors.txt");
+    for (const auto &d : doctors) {
+        file << d.id << ',' << d.name << ',' << d.specialization << ',' << d.available << '\n';
+    }
+    file.close();
+}
+
+void loadDoctorsFromFile() {
+    ifstream file("doctors.txt");
+    if (!file) return;
+    Doctor d;
+    while (file >> d.id) {
+        file.ignore();
+        getline(file, d.name, ',');
+        getline(file, d.specialization, ',');
+        file >> d.available;
+        doctors.push_back(d);
+        doctorIdCounter = max(doctorIdCounter, d.id + 1);
+    }
+    file.close();
+}
+
+void saveAppointmentsToFile() {
+    ofstream file("appointments.txt");
+    for (const auto &a : appointments) {
+        file << a.patientId << ',' << a.doctorId << ',' << a.date << ',' << a.time << '\n';
+    }
+    file.close();
+}
+
+void loadAppointmentsFromFile() {
+    ifstream file("appointments.txt");
+    if (!file) return;
+    Appointment a;
+    while (file >> a.patientId) {
+        file.ignore();
+        file >> a.doctorId;
+        file.ignore();
+        getline(file, a.date, ',');
+        getline(file, a.time);
+        appointments.push_back(a);
+    }
+    file.close();
+}
+
 void addPatient() {
     Patient p;
     p.id = patientIdCounter++;
@@ -89,8 +167,8 @@ void addPatient() {
     getline(cin, p.contact);
     cout << "Enter medical history: ";
     getline(cin, p.medicalHistory);
-
     patients.push_back(p);
+    savePatientsToFile();
     cout << "Patient added successfully with ID: " << p.id << "\n";
 }
 
@@ -116,6 +194,7 @@ void searchAndUpdatePatient() {
                 getline(cin, p.contact);
                 cout << "Enter new medical history: ";
                 getline(cin, p.medicalHistory);
+                savePatientsToFile();
                 cout << "Patient details updated successfully.\n";
             }
             return;
@@ -133,15 +212,14 @@ void addDoctor() {
     cout << "Enter specialization: ";
     getline(cin, d.specialization);
     d.available = true;
-
     doctors.push_back(d);
+    saveDoctorsToFile();
     cout << "Doctor added successfully with ID: " << d.id << "\n";
 }
 
 void manageAppointments() {
     int patientId, doctorId;
     string date, time;
-
     cout << "Enter patient ID: ";
     cin >> patientId;
     cout << "Enter doctor ID: ";
@@ -150,16 +228,7 @@ void manageAppointments() {
     cin >> date;
     cout << "Enter appointment time (HH:MM): ";
     cin >> time;
-
-    // Check if doctor is available
-    for (auto &d : doctors) {
-        if (d.id == doctorId && d.available) {
-            appointments.push_back({patientId, doctorId, date, time});
-            cout << "Appointment scheduled successfully.\n";
-            return;
-        }
-    }
-
-    cout << "Doctor is not available or invalid ID provided.\n";
+    appointments.push_back({patientId, doctorId, date, time});
+    saveAppointmentsToFile();
+    cout << "Appointment scheduled successfully.\n";
 }
-
